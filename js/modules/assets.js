@@ -44,7 +44,7 @@ const AssetsModule = {
           <p>管理所有高空作業設備，追蹤狀態與保固</p>
         </div>
         <div class="page-header-right">
-          <button class="btn btn-primary" onclick="AssetsModule.showForm()">＋ 新增設備</button>
+          ${App.can('assets') ? `<button class="btn btn-primary" onclick="AssetsModule.showForm()">＋ 新增設備</button>` : ''}
         </div>
       </div>
 
@@ -90,8 +90,8 @@ const AssetsModule = {
                 <td>
                   <div class="action-row">
                     <button class="btn btn-sm btn-secondary" onclick="AssetsModule.viewDetail(${a.id})">詳情</button>
-                    <button class="btn btn-sm btn-secondary" onclick="AssetsModule.showForm(${a.id})">✏</button>
-                    <button class="btn btn-sm btn-danger" onclick="AssetsModule.remove(${a.id})">🗑</button>
+                    ${App.can('assets') ? `<button class="btn btn-sm btn-secondary" onclick="AssetsModule.showForm(${a.id})">✏</button>` : ''}
+                    ${App.can('assets') ? `<button class="btn btn-sm btn-danger" onclick="AssetsModule.remove(${a.id})">🗑</button>` : ''}
                   </div>
                 </td>
               </tr>`;
@@ -122,8 +122,8 @@ const AssetsModule = {
           <h2><a href="#/assets" class="text-muted" style="font-weight:400;font-size:1rem" onclick="AssetsModule.renderList()">← 設備管理</a> / ${asset.serialNumber}</h2>
         </div>
         <div class="page-header-right">
-          <button class="btn btn-secondary" onclick="AssetsModule.showQR('${qrData}','${asset.serialNumber}')">📱 QR Code</button>
-          <button class="btn btn-secondary" onclick="AssetsModule.showForm(${asset.id})">✏ 編輯</button>
+          ${App.can('assets') ? `<button class="btn btn-secondary" onclick="AssetsModule.showQR('${qrData}','${asset.serialNumber}')">📱 QR Code</button>` : `<button class="btn btn-secondary" onclick="AssetsModule.showQR('${qrData}','${asset.serialNumber}')">📱 QR Code</button>`}
+          ${App.can('assets') ? `<button class="btn btn-secondary" onclick="AssetsModule.showForm(${asset.id})">✏ 編輯</button>` : ''}
           <button class="btn btn-primary" onclick="WorkOrdersModule.showForm(${asset.id})">＋ 開工單</button>
         </div>
       </div>

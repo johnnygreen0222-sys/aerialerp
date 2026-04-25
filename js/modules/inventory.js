@@ -35,8 +35,8 @@ const InventoryModule = {
           <p>多狀態庫存管理 · 安全庫存預警 · 即時成本換算</p>
         </div>
         <div class="page-header-right">
-          <button class="btn btn-secondary" onclick="InventoryModule.showReceiveForm()">📥 採購入庫</button>
-          <button class="btn btn-primary" onclick="InventoryModule.showPartForm()">＋ 新增零件</button>
+          ${App.can('inventory') ? `<button class="btn btn-secondary" onclick="InventoryModule.showReceiveForm()">📥 採購入庫</button>` : ''}
+          ${App.can('inventory') ? `<button class="btn btn-primary" onclick="InventoryModule.showPartForm()">＋ 新增零件</button>` : ''}
         </div>
       </div>
 
@@ -114,10 +114,10 @@ const InventoryModule = {
                 <td>${fmt.twd(Math.round((p.unitCostUSD||0)*rate))}</td>
                 <td>
                   <div class="action-row">
-                    <button class="btn btn-sm btn-success" onclick="InventoryModule.adjustStock(${p.id},1,'onHand')" title="入庫">＋</button>
-                    <button class="btn btn-sm btn-amber"   onclick="InventoryModule.adjustStock(${p.id},-1,'onHand')" title="出庫">－</button>
-                    <button class="btn btn-sm btn-secondary" onclick="InventoryModule.showPartForm(${p.id})">✏</button>
-                    <button class="btn btn-sm btn-danger" onclick="InventoryModule.remove(${p.id})">🗑</button>
+                    ${App.can('inventory') ? `<button class="btn btn-sm btn-success" onclick="InventoryModule.adjustStock(${p.id},1,'onHand')" title="入庫">＋</button>` : ''}
+                    ${App.can('inventory') ? `<button class="btn btn-sm btn-amber" onclick="InventoryModule.adjustStock(${p.id},-1,'onHand')" title="出庫">－</button>` : ''}
+                    ${App.can('inventory') ? `<button class="btn btn-sm btn-secondary" onclick="InventoryModule.showPartForm(${p.id})">✏</button>` : ''}
+                    ${App.can('inventory') ? `<button class="btn btn-sm btn-danger" onclick="InventoryModule.remove(${p.id})">🗑</button>` : ''}
                   </div>
                 </td>
               </tr>`;

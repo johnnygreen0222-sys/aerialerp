@@ -17,8 +17,8 @@ const BrandsModule = {
         </div>
         <div class="page-header-right">
           ${this._tab==='brands'
-            ? `<button class="btn btn-primary" onclick="BrandsModule.showBrandForm()">＋ 新增品牌</button>`
-            : `<button class="btn btn-primary" onclick="BrandsModule.showModelForm()">＋ 新增型號</button>`}
+            ? (App.can('brands') ? `<button class="btn btn-primary" onclick="BrandsModule.showBrandForm()">＋ 新增品牌</button>` : '')
+            : (App.can('brands') ? `<button class="btn btn-primary" onclick="BrandsModule.showModelForm()">＋ 新增型號</button>` : '')}
         </div>
       </div>
 
@@ -46,8 +46,8 @@ const BrandsModule = {
                   </div>
                 </div>
                 <div class="action-row">
-                  <button class="btn btn-sm btn-secondary" onclick="BrandsModule.showBrandForm(${b.id})">✏</button>
-                  <button class="btn btn-sm btn-danger" onclick="BrandsModule.removeBrand(${b.id})">🗑</button>
+                  ${App.can('brands') ? `<button class="btn btn-sm btn-secondary" onclick="BrandsModule.showBrandForm(${b.id})">✏</button>` : ''}
+                  ${App.can('brands') ? `<button class="btn btn-sm btn-danger" onclick="BrandsModule.removeBrand(${b.id})">🗑</button>` : ''}
                 </div>
               </div>
               <p class="text-sm" style="margin-bottom:12px">${b.description||''}</p>
@@ -83,8 +83,8 @@ const BrandsModule = {
                   <td>${m.weight ? (m.weight/1000).toFixed(1)+' t' : '—'}</td>
                   <td>
                     <div class="action-row">
-                      <button class="btn btn-sm btn-secondary" onclick="BrandsModule.showModelForm(${m.id})">✏</button>
-                      <button class="btn btn-sm btn-danger" onclick="BrandsModule.removeModel(${m.id})">🗑</button>
+                      ${App.can('brands') ? `<button class="btn btn-sm btn-secondary" onclick="BrandsModule.showModelForm(${m.id})">✏</button>` : ''}
+                      ${App.can('brands') ? `<button class="btn btn-sm btn-danger" onclick="BrandsModule.removeModel(${m.id})">🗑</button>` : ''}
                     </div>
                   </td>
                 </tr>`;

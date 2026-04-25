@@ -33,25 +33,28 @@
       <p class="login-desc">Taiwan Aerial Equipment Management Platform</p>
     </div>
     <div class="login-card">
-      <h2 class="login-card-title">選擇登入角色</h2>
-      <p class="login-hint">Select your role to continue</p>
-      <div class="role-grid">
-        <button class="role-card" onclick="App.login('admin')">
-          <div class="role-icon admin">🛡</div>
-          <strong>管理者</strong><span>Administrator</span>
-        </button>
-        <button class="role-card" onclick="App.login('sales')">
-          <div class="role-icon sales">💼</div>
-          <strong>業務</strong><span>Sales</span>
-        </button>
-        <button class="role-card" onclick="App.login('technician')">
-          <div class="role-icon tech">🔧</div>
-          <strong>技師</strong><span>Technician</span>
-        </button>
-      </div>
-      <div class="login-footer">
-        <span class="version-badge">v1.0.0 Demo</span>
-        <span class="login-footer-note">資料儲存於本機瀏覽器</span>
+      <h2 class="login-card-title">系統登入</h2>
+      <p class="login-hint">請輸入帳號與密碼 / Enter credentials</p>
+
+      <form id="login-form" onsubmit="App.login(event)" autocomplete="off">
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="form-label">帳號 Username</label>
+          <input class="form-control" id="login-username" placeholder="請輸入帳號" autocomplete="username" required>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="form-label">密碼 Password</label>
+          <div style="position:relative">
+            <input class="form-control" id="login-password" type="password" placeholder="請輸入密碼" autocomplete="current-password" required style="padding-right:44px">
+            <button type="button" onclick="App.togglePwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--c-text3);cursor:pointer;font-size:1rem">👁</button>
+          </div>
+        </div>
+        <div id="login-error" class="alert-banner danger hidden" style="margin-bottom:14px">⚠️ 帳號或密碼錯誤，請重試</div>
+        <button type="submit" class="btn btn-primary w-full" style="padding:11px;font-size:.95rem;justify-content:center">🔐 登入 Login</button>
+      </form>
+
+      <div class="login-footer" style="margin-top:20px">
+        <span class="version-badge">v1.1.0</span>
+        <span class="login-footer-note" style="font-size:.68rem;color:var(--c-text3)">預設帳號 admin / admin1234</span>
       </div>
     </div>
   </div>
@@ -105,6 +108,9 @@
         </a>
         <a class="nav-item" data-page="reports" href="#/reports">
           <span class="nav-icon">📈</span><span class="nav-text">報表 Reports</span>
+        </a>
+        <a class="nav-item admin-only" data-page="users" href="#/users" style="display:none">
+          <span class="nav-icon">👥</span><span class="nav-text">使用者管理 Users</span>
         </a>
       </div>
     </nav>
@@ -177,5 +183,6 @@
 <script src="js/modules/scanner-hub.js"></script>
 <script src="js/modules/brands.js"></script>
 <script src="js/modules/reports.js"></script>
+<script src="js/modules/users.js"></script>
 </body>
 </html>

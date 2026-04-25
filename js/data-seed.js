@@ -1,11 +1,20 @@
 /* ═══════════════════════════════════════════
    data-seed.js — Sample Data for AerialERP
 ═══════════════════════════════════════════ */
+const _hashPwd = async pwd => {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd + '_aerial_salt_2026'));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+};
+
 const DataSeed = {
   async run() {
     if (await DB.isSeeded()) return;
 
-    // ── Brands ──────────────────────────────
+    // ── Default Users ────────────────────────
+    await DB.add('users', { username:'admin',  passwordHash: await _hashPwd('admin1234'), role:'admin',      name:'系統管理員', active:true });
+    await DB.add('users', { username:'sales1', passwordHash: await _hashPwd('sales1234'), role:'sales',      name:'業務員甲',   active:true });
+    await DB.add('users', { username:'tech1',  passwordHash: await _hashPwd('tech1234'),  role:'technician', name:'技師陳大明', active:true });
+
     const jlg    = await DB.Brands.save({ name:'JLG', country:'USA', logo:'🟦', description:'全球最大高空作業平台品牌' });
     const genie  = await DB.Brands.save({ name:'Genie', country:'USA', logo:'🟥', description:'Terex 旗下高空設備品牌' });
     const sky    = await DB.Brands.save({ name:'Skyjack', country:'Canada', logo:'🟨', description:'加拿大高空作業平台品牌' });
