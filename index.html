@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AerialERP - 台灣高空設備代理商整合型管理系統，整合庫存、維修、設備履歷與條碼掃描">
+  <title>AerialERP | 高空設備管理系統</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0A1628">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+<!-- ── LOGIN ─────────────────────────────────────────────── -->
+<div id="login-screen" class="login-screen">
+  <div class="login-bg">
+    <div class="login-bg-grid"></div>
+    <div class="login-bg-glow glow-1"></div>
+    <div class="login-bg-glow glow-2"></div>
+  </div>
+  <div class="login-container">
+    <div class="login-logo">
+      <div class="login-logo-icon">⚙</div>
+      <h1 class="login-title">AerialERP</h1>
+      <p class="login-subtitle">高空設備整合管理系統</p>
+      <p class="login-desc">Taiwan Aerial Equipment Management Platform</p>
+    </div>
+    <div class="login-card">
+      <h2 class="login-card-title">選擇登入角色</h2>
+      <p class="login-hint">Select your role to continue</p>
+      <div class="role-grid">
+        <button class="role-card" onclick="App.login('admin')">
+          <div class="role-icon admin">🛡</div>
+          <strong>管理者</strong><span>Administrator</span>
+        </button>
+        <button class="role-card" onclick="App.login('sales')">
+          <div class="role-icon sales">💼</div>
+          <strong>業務</strong><span>Sales</span>
+        </button>
+        <button class="role-card" onclick="App.login('technician')">
+          <div class="role-icon tech">🔧</div>
+          <strong>技師</strong><span>Technician</span>
+        </button>
+      </div>
+      <div class="login-footer">
+        <span class="version-badge">v1.0.0 Demo</span>
+        <span class="login-footer-note">資料儲存於本機瀏覽器</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP SHELL ─────────────────────────────────────────── -->
+<div id="app-shell" class="app-shell hidden">
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span class="sidebar-logo-icon">⚙</span>
+        <span class="sidebar-logo-text">AerialERP</span>
+      </div>
+      <button class="sidebar-toggle" onclick="App.toggleSidebar()" title="收合選單">&#9776;</button>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">A</div>
+      <div class="user-info">
+        <span class="user-name" id="sidebar-username">管理者</span>
+        <span class="user-role" id="sidebar-role">Administrator</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <span class="nav-label">主選單</span>
+        <a class="nav-item" data-page="dashboard" href="#/">
+          <span class="nav-icon">📊</span><span class="nav-text">儀表板 Dashboard</span>
+        </a>
+        <a class="nav-item" data-page="assets" href="#/assets">
+          <span class="nav-icon">🏗</span><span class="nav-text">設備管理 Assets</span>
+          <span class="nav-badge" id="badge-assets" style="display:none"></span>
+        </a>
+        <a class="nav-item" data-page="inventory" href="#/inventory">
+          <span class="nav-icon">📦</span><span class="nav-text">零件庫存 Inventory</span>
+          <span class="nav-badge alert" id="badge-inventory" style="display:none"></span>
+        </a>
+        <a class="nav-item" data-page="workorders" href="#/workorders">
+          <span class="nav-icon">📋</span><span class="nav-text">維修工單 Work Orders</span>
+          <span class="nav-badge" id="badge-workorders" style="display:none"></span>
+        </a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-label">工具</span>
+        <a class="nav-item" data-page="scanner" href="#/scanner">
+          <span class="nav-icon">📷</span><span class="nav-text">掃描中心 Scanner</span>
+        </a>
+        <a class="nav-item" data-page="brands" href="#/brands">
+          <span class="nav-icon">🏷</span><span class="nav-text">品牌型號庫 Brands</span>
+        </a>
+        <a class="nav-item" data-page="reports" href="#/reports">
+          <span class="nav-icon">📈</span><span class="nav-text">報表 Reports</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sync-status" id="sync-status">
+        <span class="sync-dot"></span>
+        <span id="sync-label">離線模式 (Demo)</span>
+      </div>
+      <button class="btn-sync" onclick="App.syncCloud()">↻ 同步資料</button>
+      <button class="btn-logout" onclick="App.logout()">⏻ 登出</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <button class="mobile-menu-btn" onclick="App.toggleSidebar()">&#9776;</button>
+        <div class="breadcrumb" id="breadcrumb"><span>儀表板</span></div>
+      </div>
+      <div class="top-bar-right">
+        <div class="rate-display" id="rate-display">
+          <span class="rate-label">USD/TWD</span>
+          <span class="rate-value" id="rate-usd">--</span>
+          <span class="rate-sep">|</span>
+          <span class="rate-label">JPY/TWD</span>
+          <span class="rate-value" id="rate-jpy">--</span>
+        </div>
+        <button class="icon-btn" id="notif-btn" onclick="App.toggleNotifications()" title="通知">
+          🔔<span class="notif-dot hidden" id="notif-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <main id="page-content" class="page-content">
+      <div class="page-loading"><div class="spinner"></div><p>載入中…</p></div>
+    </main>
+  </div>
+</div>
+
+<!-- ── MODAL ──────────────────────────────────────────────── -->
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">標題</h3>
+      <button class="modal-close" onclick="App.closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ── NOTIFICATIONS PANEL ────────────────────────────────── -->
+<div id="notif-panel" class="notif-panel hidden">
+  <div class="notif-header"><strong>通知 Notifications</strong><button onclick="App.closeNotifications()">✕</button></div>
+  <div id="notif-list" class="notif-list"></div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────────────────── -->
+<div id="toast-container" class="toast-container"></div>
+
+<script src="js/db.js"></script>
+<script src="js/data-seed.js"></script>
+<script src="js/app.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/scanner.js"></script>
+<script src="js/modules/dashboard.js"></script>
+<script src="js/modules/assets.js"></script>
+<script src="js/modules/inventory.js"></script>
+<script src="js/modules/workorders.js"></script>
+<script src="js/modules/scanner-hub.js"></script>
+<script src="js/modules/brands.js"></script>
+<script src="js/modules/reports.js"></script>
+</body>
+</html>
