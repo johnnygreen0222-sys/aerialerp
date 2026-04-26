@@ -63,7 +63,10 @@ window.__AERIALERP_CONFIG__ = {
       name:         '${cfg.tech.name}',
       active:       true
     },
-  ]
+  ],
+  emailjsServiceId:  '${process.env.EMAILJS_SERVICE_ID  || ''}',
+  emailjsTemplateId: '${process.env.EMAILJS_TEMPLATE_ID || ''}',
+  emailjsPublicKey:  '${process.env.EMAILJS_PUBLIC_KEY  || ''}',
 };
 `;
 

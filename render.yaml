@@ -2,7 +2,7 @@ services:
   - type: web
     name: aerialerp
     env: static
-    buildCommand: ""
+    buildCommand: "node build.js"
     staticPublishPath: .
     pullRequestPreviewsEnabled: true
     headers:
