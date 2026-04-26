@@ -258,8 +258,8 @@ async function submitForm(e) {
     const caseNo = await genCaseNo();
     const warrantyFile = document.getElementById('f-warranty-card').files[0];
     const invoiceFile  = document.getElementById('f-invoice').files[0];
-    const warrantyB64  = await toBase64(warrantyFile);
-    const invoiceB64   = await toBase64(invoiceFile);
+    const warrantyB64  = warrantyFile ? await toBase64(warrantyFile) : null;
+    const invoiceB64   = invoiceFile  ? await toBase64(invoiceFile)  : null;
 
     const record = {
       caseNo,
@@ -278,31 +278,42 @@ async function submitForm(e) {
       submittedAt:  new Date().toISOString(),
     };
 
+    // ① 先儲存申請資料（不論 Email 是否成功）
     await DB.ServiceRequests.save(record);
 
-    // EmailJS (if configured)
-    const cfg = window.__AERIALERP_CONFIG__ || {};
-    if (cfg.emailjsServiceId && cfg.emailjsTemplateId && cfg.emailjsPublicKey) {
-      emailjs.init(cfg.emailjsPublicKey);
-      await emailjs.send(cfg.emailjsServiceId, cfg.emailjsTemplateId, {
-        to_name:     record.name,
-        to_email:    record.email,
-        case_no:     caseNo,
-        service_type: { repair:'維修申請', warranty:'保固登錄', maintenance:'定期保養' }[selectedType]||selectedType,
-        brand:       record.brand,
-        model:       record.model,
-        serial_no:   record.serialNumber,
-        company_address: '台北市大安區溫州街15號B1',
-        company_phone:   '02-236361120',
-        company_hours:   '週一至週五 09:00-12:00 / 13:00-18:00',
-      }).catch(err => console.warn('[EmailJS]', err));
+    // ② 嘗試發送 EmailJS 確認信（失敗不影響流程）
+    try {
+      const cfg = window.__AERIALERP_CONFIG__ || {};
+      if (cfg.emailjsServiceId && cfg.emailjsTemplateId && cfg.emailjsPublicKey) {
+        // EmailJS v4 正確初始化方式
+        emailjs.init({ publicKey: cfg.emailjsPublicKey });
+        await emailjs.send(cfg.emailjsServiceId, cfg.emailjsTemplateId, {
+          to_name:         record.name,
+          to_email:        record.email,
+          case_no:         caseNo,
+          service_type:    { repair:'維修申請', warranty:'保固登錄', maintenance:'定期保養' }[selectedType] || selectedType,
+          brand:           record.brand,
+          model:           record.model,
+          serial_no:       record.serialNumber,
+          description:     record.description,
+          company_name:    '台灣高空 服務團隊',
+          company_address: '台北市大安區溫州街15號B1',
+          company_phone:   '02-236361120',
+          company_hours:   '週一至週五 09:00-12:00 / 13:00-18:00',
+        });
+      }
+    } catch (mailErr) {
+      // 發信失敗只 log，不中斷主流程
+      console.warn('[EmailJS] 發信失敗（不影響申請送出）:', mailErr);
     }
 
+    // ③ 顯示成功畫面
     document.getElementById('result-caseno').textContent = caseNo;
     goStep(3);
+
   } catch(err) {
-    console.error(err);
-    errEl.textContent = '送出失敗，請稍後再試或直接電話聯絡我們。';
+    console.error('[submitForm]', err);
+    errEl.textContent = '送出失敗：' + (err?.message || '請稍後再試，或直接電話聯絡 02-236361120');
     errEl.classList.remove('hidden');
   } finally {
     btn.disabled = false; btn.textContent = '📤 送出申請';
