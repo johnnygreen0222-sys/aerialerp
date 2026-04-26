@@ -130,6 +130,11 @@ const WorkOrdersModule = {
         <div class="info-row"><span class="label">到期日</span><span class="value">${fmt.date(w.dueDate)}</span></div>
         ${w.completedDate?`<div class="info-row"><span class="label">完工日</span><span class="value text-emerald">${fmt.date(w.completedDate)}</span></div>`:''}
         <div class="info-row"><span class="label">負責技師</span><span class="value">${w.technicianName||'未指派'}</span></div>
+        ${w.vendorName  ? `<div class="info-row"><span class="label">委外廠商</span><span class="value">${w.vendorName}</span></div>` : ''}
+        ${w.vendorPhone ? `<div class="info-row"><span class="label">廠商電話</span><span class="value mono">${w.vendorPhone}</span></div>` : ''}
+        ${w.rmaNo       ? `<div class="info-row"><span class="label">RMA 單號</span><span class="value mono">${w.rmaNo}</span></div>` : ''}
+        ${w.returnDate  ? `<div class="info-row"><span class="label">預計回件</span><span class="value">${fmt.date(w.returnDate)}</span></div>` : ''}
+        ${w.vendorCost  ? `<div class="info-row"><span class="label">廠商報價</span><span class="value text-number">${fmt.twd(w.vendorCost)}</span></div>` : ''}
       </div>
 
       <div style="margin-bottom:16px">
@@ -199,8 +204,12 @@ const WorkOrdersModule = {
           </div>
           <div class="form-group">
             <label class="form-label">工單類型</label>
-            <select class="form-control" id="wof-type">
-              ${WO_TYPES.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}
+            <select class="form-control" id="wof-type" onchange="WorkOrdersModule.onTypeChange()">
+              <option value="preventive">🔧 定期保養</option>
+              <option value="corrective">🚨 故障維修</option>
+              <option value="inspection">🔍 安全檢查</option>
+              <option value="outsourced">👨‍🔧 委外維修師傅</option>
+              <option value="factory_return">🏭 送回原廠處理</option>
             </select>
           </div>
         </div>
@@ -208,7 +217,9 @@ const WorkOrdersModule = {
           <div class="form-group">
             <label class="form-label">優先度</label>
             <select class="form-control" id="wof-priority">
-              ${WO_PRIS.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}
+              <option value="high">🔴 緊急</option>
+              <option value="medium" selected>🟡 一般</option>
+              <option value="low">⚪ 低</option>
             </select>
           </div>
           <div class="form-group">
@@ -216,14 +227,43 @@ const WorkOrdersModule = {
             <input class="form-control" id="wof-tech" placeholder="技師姓名">
           </div>
         </div>
+
+        <!-- 委外/原廠 額外欄位 -->
+        <div id="wof-outsource-fields" style="display:none">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">委外廠商 / 原廠聯絡人</label>
+              <input class="form-control" id="wof-vendor" placeholder="例：Sound House 維修部 / Dynaudio Taiwan">
+            </div>
+            <div class="form-group">
+              <label class="form-label">廠商聯絡電話</label>
+              <input class="form-control" id="wof-vendor-phone" placeholder="02-XXXX-XXXX">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">預估費用 NT$</label>
+              <input class="form-control" type="number" id="wof-vendor-cost" placeholder="0" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">預計回件日期</label>
+              <input class="form-control" type="date" id="wof-return-date">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">RMA / 送修單號（選填）</label>
+            <input class="form-control" id="wof-rma" placeholder="原廠或委外廠商給的送修單號">
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">到期日</label>
             <input class="form-control" type="date" id="wof-due" value="${today}">
           </div>
-          <div class="form-group">
+          <div class="form-group" id="wof-hours-wrap">
             <label class="form-label">工時 (hrs)</label>
-            <input class="form-control" type="number" id="wof-hours" value="2" min="0" step="0.5">
+            <input class="form-control" type="number" id="wof-hours" value="1" min="0" step="0.5">
           </div>
         </div>
         <div class="form-group">
@@ -241,25 +281,46 @@ const WorkOrdersModule = {
       </form>`);
   },
 
+  onTypeChange() {
+    const type = document.getElementById('wof-type').value;
+    const showExtra = ['outsourced','factory_return'].includes(type);
+    document.getElementById('wof-outsource-fields').style.display = showExtra ? '' : 'none';
+    // 委外/原廠時工時設為0（費用由廠商報價）
+    if (showExtra) {
+      document.getElementById('wof-hours').value = '0';
+    }
+  },
+
   async saveForm(e) {
     e.preventDefault();
+    const type       = document.getElementById('wof-type').value;
     const laborHours = parseFloat(document.getElementById('wof-hours').value)||0;
+    const isOutsource= ['outsourced','factory_return'].includes(type);
     const obj = {
-      assetId:       parseInt(document.getElementById('wof-asset').value),
-      type:          document.getElementById('wof-type').value,
-      priority:      document.getElementById('wof-priority').value,
-      technicianName:document.getElementById('wof-tech').value.trim(),
-      dueDate:       document.getElementById('wof-due').value,
+      assetId:        parseInt(document.getElementById('wof-asset').value),
+      type,
+      priority:       document.getElementById('wof-priority').value,
+      technicianName: document.getElementById('wof-tech').value.trim(),
+      dueDate:        document.getElementById('wof-due').value,
       laborHours,
-      laborRate:     1200,
-      description:   document.getElementById('wof-desc').value.trim(),
-      notes:         document.getElementById('wof-notes').value.trim(),
-      status:        'open',
-      reportDate:    new Date().toISOString().slice(0,10),
-      partsUsed:     [],
-      totalCost:     laborHours * 1200,
-      photos:        []
+      laborRate:      1200,
+      description:    document.getElementById('wof-desc').value.trim(),
+      notes:          document.getElementById('wof-notes').value.trim(),
+      status:         'open',
+      reportDate:     new Date().toISOString().slice(0,10),
+      partsUsed:      [],
+      totalCost:      laborHours * 1200,
+      photos:         [],
+      // 委外/原廠欄位
+      ...(isOutsource ? {
+        vendorName:   document.getElementById('wof-vendor')?.value.trim(),
+        vendorPhone:  document.getElementById('wof-vendor-phone')?.value.trim(),
+        vendorCost:   parseInt(document.getElementById('wof-vendor-cost')?.value)||0,
+        returnDate:   document.getElementById('wof-return-date')?.value,
+        rmaNo:        document.getElementById('wof-rma')?.value.trim(),
+      } : {}),
     };
+    if (isOutsource) obj.totalCost = obj.vendorCost || 0;
     await DB.WorkOrders.save(obj);
     App.closeModal();
     App.toast('工單已開立 ✓','success');

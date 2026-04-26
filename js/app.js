@@ -110,7 +110,13 @@ const App = (() => {
     in_transit: { label:'在途 In-transit',    badge:'badge-cyan' }
   };
   const WO_STATUS   = { open:{label:'待派工',badge:'badge-gray'}, in_progress:{label:'進行中',badge:'badge-blue'}, completed:{label:'已完成',badge:'badge-emerald'}, pending_invoice:{label:'待開發票',badge:'badge-amber'}, cancelled:{label:'已取消',badge:'badge-red'} };
-  const WO_TYPE     = { preventive:{label:'定期保養',icon:'🔧'}, corrective:{label:'故障維修',icon:'🚨'}, inspection:{label:'安全檢查',icon:'🔍'} };
+  const WO_TYPE = {
+    preventive:     { label:'定期保養',       icon:'🔧' },
+    corrective:     { label:'故障維修',       icon:'🚨' },
+    inspection:     { label:'安全檢查',       icon:'🔍' },
+    outsourced:     { label:'委外維修師傅',   icon:'👨‍🔧' },
+    factory_return: { label:'送回原廠處理',   icon:'🏭' },
+  };
   const WO_PRIORITY = { high:{label:'緊急',badge:'badge-red'}, medium:{label:'一般',badge:'badge-amber'}, low:{label:'低',badge:'badge-gray'} };
   const SR_STATUS   = { pending:{label:'待處理',badge:'badge-amber'}, processing:{label:'處理中',badge:'badge-blue'}, completed:{label:'已完成',badge:'badge-emerald'}, cancelled:{label:'已取消',badge:'badge-gray'} };
 
