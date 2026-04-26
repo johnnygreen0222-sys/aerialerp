@@ -109,9 +109,69 @@ const ServiceRequestsModule = {
 
   async convertToWO(id) {
     const r = await DB.ServiceRequests.get(id);
+    if (!r) return;
+
+    // 1. 尋找對應設備（by SN）
+    const assets = await DB.Assets.all();
+    let asset = assets.find(a => a.serialNumber === r.serialNumber);
+
+    // 2. 若無對應設備，自動建立一筆基本設備記錄
+    if (!asset) {
+      const models = await DB.Models.all();
+      const brands = await DB.Brands.all();
+      // 嘗試比對品牌
+      const brand = brands.find(b => b.name === r.brand);
+      asset = await DB.Assets.save({
+        serialNumber: r.serialNumber,
+        modelId:      null,
+        brandHint:    r.brand,
+        status:       'maintenance',
+        location:     '待確認',
+        notes:        `由客戶申請自動建立 (案號：${r.caseNo})`,
+        purchaseDate: null,
+        warrantyExpiry: null,
+        hours:        0,
+      });
+    }
+
+    // 3. 判斷工單類型
+    const typeMap = { repair:'corrective', warranty:'corrective', maintenance:'preventive' };
+
+    // 4. 建立工單
+    const wo = await DB.WorkOrders.save({
+      assetId:        asset.id,
+      type:           typeMap[r.serviceType] || 'corrective',
+      priority:       'medium',
+      status:         'open',
+      description:    `【客戶申請轉入】${r.description || ''}\n客戶：${r.name}  電話：${r.phone}  案號：${r.caseNo}`,
+      technicianName: '',
+      reportDate:     new Date().toISOString().slice(0,10),
+      dueDate:        r.preferredDate || '',
+      laborHours:     0,
+      laborRate:      1200,
+      partsUsed:      [],
+      totalCost:      0,
+      photos:         [],
+      sourceType:     'service_request',
+      sourceSrId:     r.id,
+      sourceCaseNo:   r.caseNo,
+      customerName:   r.name,
+      customerPhone:  r.phone,
+      customerEmail:  r.email,
+    });
+
+    // 5. 更新申請單狀態為「處理中」並記錄 WO ID
+    r.status   = 'processing';
+    r.linkedWoId = wo.id;
+    await DB.ServiceRequests.save(r);
+
     App.closeModal();
-    App.toast(`請前往工單模組開立 — 客戶：${r.name}，SN：${r.serialNumber}`,'info');
+    App.toast(`✅ 工單已建立！(案號：${r.caseNo} → 工單 #${wo.id})`, 'success');
+    App.refreshBadges();
+
+    // 6. 跳轉到工單模組並顯示新工單
     location.hash = '#/workorders';
+    setTimeout(() => WorkOrdersModule.viewDetail(wo.id), 300);
   },
 
   async remove(id) {

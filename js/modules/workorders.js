@@ -121,6 +121,9 @@ const WorkOrdersModule = {
       </div>
 
       <div class="info-grid" style="margin-bottom:16px">
+        ${w.sourceCaseNo ? `<div class="info-row"><span class="label">來源申請</span><span class="value"><span class="badge badge-cyan" style="cursor:pointer" onclick="App.closeModal();location.hash='#/service_requests'">📝 ${w.sourceCaseNo}</span></span></div>` : ''}
+        ${w.customerName ? `<div class="info-row"><span class="label">客戶</span><span class="value">${w.customerName}</span></div>` : ''}
+        ${w.customerPhone ? `<div class="info-row"><span class="label">客戶電話</span><span class="value mono">${w.customerPhone}</span></div>` : ''}
         <div class="info-row"><span class="label">設備 SN</span><span class="value mono">${asset.serialNumber||'—'}</span></div>
         <div class="info-row"><span class="label">型號</span><span class="value">${model.modelName||'—'}</span></div>
         <div class="info-row"><span class="label">開單日期</span><span class="value">${fmt.date(w.reportDate)}</span></div>
