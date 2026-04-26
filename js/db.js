@@ -2,24 +2,26 @@
    db.js — IndexedDB Data Layer for AerialERP
 ═══════════════════════════════════════════ */
 const DB = (() => {
-  const NAME = 'AerialERP', VER = 1;
+  const NAME = 'AerialERP', VER = 2;
   let _db = null;
 
   const open = () => new Promise((res, rej) => {
     if (_db) return res(_db);
-    const req = indexedDB.open(NAME, VER);
+    const req = indexedDB.open(NAME, 2); // bump version for new stores
     req.onupgradeneeded = e => {
       const db = e.target.result;
       const stores = {
-        brands:    { key: 'id', auto: true },
-        models:    { key: 'id', auto: true },
-        assets:    { key: 'id', auto: true },
-        parts:     { key: 'id', auto: true },
-        workorders:{ key: 'id', auto: true },
-        transactions:{ key: 'id', auto: true },
-        inventory_counts:{ key: 'id', auto: true },
-        settings:  { key: 'key', auto: false },
-        users:     { key: 'id', auto: true }
+        brands:           { key: 'id', auto: true },
+        models:           { key: 'id', auto: true },
+        assets:           { key: 'id', auto: true },
+        parts:            { key: 'id', auto: true },
+        workorders:       { key: 'id', auto: true },
+        transactions:     { key: 'id', auto: true },
+        inventory_counts: { key: 'id', auto: true },
+        settings:         { key: 'key', auto: false },
+        users:            { key: 'id', auto: true },
+        service_requests: { key: 'id', auto: true },
+        customers:        { key: 'id', auto: true },
       };
       Object.entries(stores).forEach(([name, cfg]) => {
         if (!db.objectStoreNames.contains(name)) {
@@ -102,9 +104,29 @@ const DB = (() => {
     save: obj => obj.id ? put('inventory_counts', obj) : add('inventory_counts', obj),
   };
 
+  const ServiceRequests = {
+    all:      ()      => getAll('service_requests'),
+    get:      id      => getOne('service_requests', id),
+    byStatus: status  => getAll('service_requests', r => status==='all' || r.status===status),
+    save:     obj     => obj.id ? put('service_requests', obj) : add('service_requests', obj),
+    remove:   id      => remove('service_requests', id),
+    pending:  ()      => getAll('service_requests', r => r.status === 'pending'),
+  };
+  const Customers = {
+    all:    ()   => getAll('customers'),
+    get:    id   => getOne('customers', id),
+    save:   obj  => obj.id ? put('customers', obj) : add('customers', obj),
+    remove: id   => remove('customers', id),
+    search: q    => getAll('customers', c => {
+      const lq = q.toLowerCase();
+      return c.name?.toLowerCase().includes(lq) || c.phone?.includes(lq) || c.company?.toLowerCase().includes(lq);
+    }),
+  };
+
   return {
     open, getAll, getOne, add, put, remove, clear, count,
     getSetting, setSetting, isSeeded, markSeeded,
-    Brands, Models, Assets, Parts, WorkOrders, Transactions, InventoryCounts
+    Brands, Models, Assets, Parts, WorkOrders, Transactions, InventoryCounts,
+    ServiceRequests, Customers
   };
 })();

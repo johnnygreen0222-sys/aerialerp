@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="AerialERP - 台灣高空設備代理商整合型管理系統，整合庫存、維修、設備履歷與條碼掃描">
-  <title>AerialERP | 高空設備管理系統</title>
+  <meta name="description" content="台灣高空服務團隊整合管理系統 — 庫存、維修工單、客戶申請、設備履歷">
+  <title>台灣高空 服務團隊 | 整合管理系統</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0A1628">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,9 +29,9 @@
   <div class="login-container">
     <div class="login-logo">
       <div class="login-logo-icon">⚙</div>
-      <h1 class="login-title">AerialERP</h1>
-      <p class="login-subtitle">高空設備整合管理系統</p>
-      <p class="login-desc">Taiwan Aerial Equipment Management Platform</p>
+      <h1 class="login-title">台灣高空</h1>
+      <p class="login-subtitle">服務團隊整合管理系統</p>
+      <p class="login-desc">Taiwan Aerial Equipment Service Platform</p>
     </div>
     <div class="login-card">
       <h2 class="login-card-title">系統登入</h2>
@@ -66,7 +67,7 @@
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <span class="sidebar-logo-icon">⚙</span>
-        <span class="sidebar-logo-text">AerialERP</span>
+      <span class="sidebar-logo-text">台灣高空</span>
       </div>
       <button class="sidebar-toggle" onclick="App.toggleSidebar()" title="收合選單">&#9776;</button>
     </div>
@@ -106,11 +107,30 @@
         <a class="nav-item" data-page="brands" href="#/brands">
           <span class="nav-icon">🏷</span><span class="nav-text">品牌型號庫 Brands</span>
         </a>
+        <a class="nav-item" data-page="calendar" href="#/calendar">
+          <span class="nav-icon">📅</span><span class="nav-text">保養行事曆 Calendar</span>
+        </a>
         <a class="nav-item" data-page="reports" href="#/reports">
           <span class="nav-icon">📈</span><span class="nav-text">報表 Reports</span>
         </a>
-        <a class="nav-item admin-only" data-page="users" href="#/users" style="display:none">
-          <span class="nav-icon">👥</span><span class="nav-text">使用者管理 Users</span>
+      </div>
+      <div class="nav-section">
+        <span class="nav-label">客戶服務</span>
+        <a class="nav-item" data-page="service_requests" href="#/service_requests">
+          <span class="nav-icon">📝</span><span class="nav-text">客戶申請 Service</span>
+          <span class="nav-badge alert" id="badge-sr" style="display:none"></span>
+        </a>
+        <a class="nav-item" data-page="customers" href="#/customers">
+          <span class="nav-icon">👥</span><span class="nav-text">客戶管理 CRM</span>
+        </a>
+      </div>
+      <div class="nav-section">
+        <span class="nav-label">系統</span>
+        <a class="nav-item admin-only" data-page="users" href="#/users">
+          <span class="nav-icon">🔐</span><span class="nav-text">使用者管理 Users</span>
+        </a>
+        <a class="nav-item admin-only" data-page="backup" href="#/backup">
+          <span class="nav-icon">💾</span><span class="nav-text">資料備份 Backup</span>
         </a>
       </div>
     </nav>
@@ -172,6 +192,7 @@
 <div id="toast-container" class="toast-container"></div>
 
 <script src="js/db.js"></script>
+<script src="js/config.js"></script>
 <script src="js/data-seed.js"></script>
 <script src="js/app.js"></script>
 <script src="js/charts.js"></script>
@@ -183,6 +204,10 @@
 <script src="js/modules/scanner-hub.js"></script>
 <script src="js/modules/brands.js"></script>
 <script src="js/modules/reports.js"></script>
+<script src="js/modules/service-requests.js"></script>
+<script src="js/modules/crm.js"></script>
+<script src="js/modules/backup.js"></script>
+<script src="js/modules/calendar.js"></script>
 <script src="js/modules/users.js"></script>
 </body>
 </html>

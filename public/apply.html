@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣高空 — 維修/保固申請</title>
+  <meta name="description" content="台灣高空設備維修申請、保固登錄、定期保養預約線上表單">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="../js/db.js"></script>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <style>
+    body { background: var(--c-bg); min-height: 100vh; }
+    .apply-wrap { max-width: 680px; margin: 0 auto; padding: 32px 20px 80px; }
+    .apply-header { text-align:center; margin-bottom:40px; }
+    .apply-logo { width:64px;height:64px;background:linear-gradient(135deg,#1d4ed8,#0891b2);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 16px;box-shadow:0 8px 32px rgba(29,78,216,.4); }
+    .apply-header h1 { font-size:1.7rem;font-weight:800;background:linear-gradient(135deg,#60a5fa,#22d3ee);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent; }
+    .apply-header p { color:var(--c-text3);margin-top:6px;font-size:.9rem; }
+    .step-bar { display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:36px; }
+    .step { display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:120px; }
+    .step-dot { width:32px;height:32px;border-radius:50%;background:var(--c-surface2);border:2px solid var(--c-border);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:var(--c-text3);transition:all .3s; }
+    .step.active .step-dot,.step.done .step-dot { background:var(--c-blue);border-color:var(--c-blue);color:#fff; }
+    .step-label { font-size:.7rem;color:var(--c-text3); }
+    .step.active .step-label { color:var(--c-blue); }
+    .step-line { flex:1;height:2px;background:var(--c-border);max-width:60px;align-self:flex-start;margin-top:16px; }
+    .step-line.done { background:var(--c-blue); }
+    .type-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:8px; }
+    .type-card { display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 12px;background:var(--glass-bg);border:2px solid var(--c-border);border-radius:var(--r-lg);cursor:pointer;transition:all .25s; }
+    .type-card:hover { border-color:var(--c-blue);background:rgba(59,130,246,.08); }
+    .type-card.selected { border-color:var(--c-blue);background:rgba(59,130,246,.15); }
+    .type-icon { font-size:2rem; }
+    .type-card strong { font-size:.9rem; }
+    .type-card span { font-size:.72rem;color:var(--c-text3); }
+    .file-upload-label { display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px;background:var(--glass-bg);border:2px dashed var(--c-border);border-radius:var(--r-lg);cursor:pointer;transition:border-color .2s;text-align:center; }
+    .file-upload-label:hover { border-color:var(--c-blue); }
+    .file-preview { margin-top:8px;border-radius:var(--r-md);overflow:hidden;max-height:120px;object-fit:cover;width:100%; }
+    .success-wrap { text-align:center;padding:40px 20px; }
+    .success-icon { font-size:4rem;margin-bottom:16px; }
+    .case-no-box { background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:var(--r-lg);padding:20px;margin:20px 0; }
+    .case-no { font-size:1.6rem;font-weight:800;font-family:'Inter',monospace;color:var(--c-emerald); }
+    .info-box { background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);padding:20px;text-align:left;margin-top:20px; }
+    .info-box h4 { margin-bottom:12px;font-size:.9rem; }
+    .info-row { display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;font-size:.85rem; }
+    .info-row span:first-child { color:var(--c-text3);min-width:80px; }
+    @media(max-width:480px){ .type-grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="apply-wrap">
+  <div class="apply-header">
+    <div class="apply-logo">⚙</div>
+    <h1>台灣高空 服務申請</h1>
+    <p>維修申請 · 保固登錄 · 定期保養預約</p>
+  </div>
+
+  <!-- Step Bar -->
+  <div class="step-bar">
+    <div class="step active" id="step-indicator-1"><div class="step-dot">1</div><div class="step-label">選擇服務</div></div>
+    <div class="step-line" id="line-1"></div>
+    <div class="step" id="step-indicator-2"><div class="step-dot">2</div><div class="step-label">填寫資料</div></div>
+    <div class="step-line" id="line-2"></div>
+    <div class="step" id="step-indicator-3"><div class="step-dot">3</div><div class="step-label">送出完成</div></div>
+  </div>
+
+  <!-- Step 1: Service Type -->
+  <div id="step-1">
+    <div class="card">
+      <div class="card-header"><span class="card-title">請選擇服務類型</span></div>
+      <div class="type-grid">
+        <div class="type-card" onclick="selectType('repair')" id="type-repair">
+          <span class="type-icon">🔧</span>
+          <strong>維修申請</strong>
+          <span>設備故障報修</span>
+        </div>
+        <div class="type-card" onclick="selectType('warranty')" id="type-warranty">
+          <span class="type-icon">🛡</span>
+          <strong>保固登錄</strong>
+          <span>新機保固登錄</span>
+        </div>
+        <div class="type-card" onclick="selectType('maintenance')" id="type-maintenance">
+          <span class="type-icon">📅</span>
+          <strong>定期保養</strong>
+          <span>預約例行保養</span>
+        </div>
+      </div>
+      <div style="margin-top:24px;text-align:right">
+        <button class="btn btn-primary" onclick="goStep(2)" id="btn-step1" disabled style="opacity:.5">下一步 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Form -->
+  <div id="step-2" class="hidden">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" id="form-title">填寫維修申請資料</span>
+        <button class="btn btn-sm btn-secondary" onclick="goStep(1)">← 返回</button>
+      </div>
+      <form id="apply-form" onsubmit="submitForm(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">姓名 <span>*</span></label>
+            <input class="form-control" id="f-name" placeholder="請輸入姓名" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">聯絡電話 <span>*</span></label>
+            <input class="form-control" id="f-phone" type="tel" placeholder="例：0912-345-678" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email <span>*</span></label>
+          <input class="form-control" id="f-email" type="email" placeholder="用於接收確認信" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">品牌 <span>*</span></label>
+            <select class="form-control" id="f-brand" required>
+              <option value="">選擇品牌…</option>
+              <option>JLG</option><option>Genie</option><option>Skyjack</option><option>其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">型號 Model <span>*</span></label>
+            <input class="form-control" id="f-model" placeholder="例：JLG 450AJ" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">產品序號 SN <span>*</span></label>
+          <input class="form-control" id="f-sn" placeholder="例：JLG450AJ-007" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">問題描述 / 申請說明 <span>*</span></label>
+          <textarea class="form-control" id="f-desc" rows="3" placeholder="請詳述設備問題或申請事項…" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">預約日期（選填）</label>
+          <input class="form-control" id="f-date" type="date">
+        </div>
+
+        <!-- 保固/維修相關附件 -->
+        <div id="warranty-fields">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">保固卡照片（選填）</label>
+              <label class="file-upload-label" for="f-warranty-card">
+                <span style="font-size:1.5rem">📄</span>
+                <span class="text-sm text-muted">點擊上傳保固卡</span>
+              </label>
+              <input type="file" id="f-warranty-card" accept="image/*" style="display:none" onchange="previewFile(this,'prev-warranty')">
+              <img id="prev-warranty" class="file-preview hidden">
+            </div>
+            <div class="form-group">
+              <label class="form-label">發票照片（選填）</label>
+              <label class="file-upload-label" for="f-invoice">
+                <span style="font-size:1.5rem">🧾</span>
+                <span class="text-sm text-muted">點擊上傳發票</span>
+              </label>
+              <input type="file" id="f-invoice" accept="image/*" style="display:none" onchange="previewFile(this,'prev-invoice')">
+              <img id="prev-invoice" class="file-preview hidden">
+            </div>
+          </div>
+        </div>
+
+        <div id="submit-error" class="alert-banner danger hidden" style="margin-bottom:12px"></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="goStep(1)">← 返回</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">📤 送出申請</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Step 3: Success -->
+  <div id="step-3" class="hidden">
+    <div class="card">
+      <div class="success-wrap">
+        <div class="success-icon">✅</div>
+        <h2 style="color:var(--c-emerald)">申請已成功送出！</h2>
+        <p style="margin-top:8px">我們已收到您的申請，確認信將發送至您的 Email</p>
+
+        <div class="case-no-box">
+          <div style="font-size:.8rem;color:var(--c-text3);margin-bottom:6px">您的申請案號</div>
+          <div class="case-no" id="result-caseno">SVC-20260426-0001</div>
+          <div style="font-size:.78rem;color:var(--c-text3);margin-top:6px">請保留此案號以便後續查詢</div>
+        </div>
+
+        <div class="info-box">
+          <h4>📍 送修資訊</h4>
+          <div class="info-row"><span>公司名稱</span><span>台灣高空</span></div>
+          <div class="info-row"><span>送修地址</span><span>台北市大安區溫州街15號B1</span></div>
+          <div class="info-row"><span>聯絡電話</span><span>02-236361120</span></div>
+          <div class="info-row"><span>服務時間</span><span>週一至週五 09:00-12:00 / 13:00-18:00<br><span style="color:var(--c-amber)">例假日與國定假日休息</span></span></div>
+          <div class="info-row"><span>預計回覆</span><span>2 個工作天內聯繫確認</span></div>
+        </div>
+
+        <button class="btn btn-primary" style="margin-top:24px" onclick="resetForm()">再次申請</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedType = '';
+
+function selectType(t) {
+  selectedType = t;
+  ['repair','warranty','maintenance'].forEach(x => document.getElementById('type-'+x).classList.toggle('selected', x===t));
+  const btn = document.getElementById('btn-step1');
+  btn.disabled = false; btn.style.opacity = '1';
+}
+
+function goStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('step-'+i).classList.toggle('hidden', i!==n);
+    const ind = document.getElementById('step-indicator-'+i);
+    ind.classList.toggle('active', i===n);
+    ind.classList.toggle('done', i<n);
+  });
+  [1,2].forEach(i => {
+    const l = document.getElementById('line-'+i);
+    if (l) l.classList.toggle('done', i<n);
+  });
+  if (n===2) {
+    const titles = { repair:'維修申請資料', warranty:'保固登錄資料', maintenance:'定期保養預約' };
+    document.getElementById('form-title').textContent = '填寫' + (titles[selectedType]||'申請資料');
+  }
+}
+
+function previewFile(input, previewId) {
+  const prev = document.getElementById(previewId);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => { prev.src = e.target.result; prev.classList.remove('hidden'); };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+const toBase64 = file => new Promise((res, rej) => {
+  if (!file) return res(null);
+  const r = new FileReader();
+  r.onload = e => res(e.target.result);
+  r.onerror = rej;
+  r.readAsDataURL(file);
+});
+
+async function submitForm(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  const errEl = document.getElementById('submit-error');
+  errEl.classList.add('hidden');
+
+  try {
+    await DB.open();
+    const caseNo = await genCaseNo();
+    const warrantyFile = document.getElementById('f-warranty-card').files[0];
+    const invoiceFile  = document.getElementById('f-invoice').files[0];
+    const warrantyB64  = await toBase64(warrantyFile);
+    const invoiceB64   = await toBase64(invoiceFile);
+
+    const record = {
+      caseNo,
+      serviceType:  selectedType,
+      status:       'pending',
+      name:         document.getElementById('f-name').value.trim(),
+      phone:        document.getElementById('f-phone').value.trim(),
+      email:        document.getElementById('f-email').value.trim(),
+      brand:        document.getElementById('f-brand').value,
+      model:        document.getElementById('f-model').value.trim(),
+      serialNumber: document.getElementById('f-sn').value.trim(),
+      description:  document.getElementById('f-desc').value.trim(),
+      preferredDate:document.getElementById('f-date').value,
+      warrantyCard: warrantyB64,
+      invoice:      invoiceB64,
+      submittedAt:  new Date().toISOString(),
+    };
+
+    await DB.ServiceRequests.save(record);
+
+    // EmailJS (if configured)
+    const cfg = window.__AERIALERP_CONFIG__ || {};
+    if (cfg.emailjsServiceId && cfg.emailjsTemplateId && cfg.emailjsPublicKey) {
+      emailjs.init(cfg.emailjsPublicKey);
+      await emailjs.send(cfg.emailjsServiceId, cfg.emailjsTemplateId, {
+        to_name:     record.name,
+        to_email:    record.email,
+        case_no:     caseNo,
+        service_type: { repair:'維修申請', warranty:'保固登錄', maintenance:'定期保養' }[selectedType]||selectedType,
+        brand:       record.brand,
+        model:       record.model,
+        serial_no:   record.serialNumber,
+        company_address: '台北市大安區溫州街15號B1',
+        company_phone:   '02-236361120',
+        company_hours:   '週一至週五 09:00-12:00 / 13:00-18:00',
+      }).catch(err => console.warn('[EmailJS]', err));
+    }
+
+    document.getElementById('result-caseno').textContent = caseNo;
+    goStep(3);
+  } catch(err) {
+    console.error(err);
+    errEl.textContent = '送出失敗，請稍後再試或直接電話聯絡我們。';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = '📤 送出申請';
+  }
+}
+
+async function genCaseNo() {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  const all = await DB.ServiceRequests.all();
+  const n   = all.filter(r => r.caseNo?.includes(ymd)).length;
+  return `SVC-${ymd}-${String(n+1).padStart(4,'0')}`;
+}
+
+function resetForm() {
+  selectedType = '';
+  document.getElementById('apply-form').reset();
+  ['prev-warranty','prev-invoice'].forEach(id => { const el=document.getElementById(id); el.src=''; el.classList.add('hidden'); });
+  ['repair','warranty','maintenance'].forEach(x => document.getElementById('type-'+x).classList.remove('selected'));
+  document.getElementById('btn-step1').disabled = true;
+  document.getElementById('btn-step1').style.opacity = '0.5';
+  goStep(1);
+}
+
+document.addEventListener('DOMContentLoaded', () => DB.open());
+</script>
+</body>
+</html>
