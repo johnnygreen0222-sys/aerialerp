@@ -7,6 +7,12 @@ const Dashboard = {
       const [assets, parts, wos, brands] = await Promise.all([
         DB.Assets.all(), DB.Parts.all(), DB.WorkOrders.all(), DB.Brands.all()
       ]);
+      
+      // Load card visibility settings
+      const cardVisibility = await DB.getSetting('dashboardCards') || {
+        stats: true, charts: true, alerts: true, warranty: true
+      };
+      
       const fmt = App.fmt;
       const lowStock = parts.filter(p => (p.onHand||0) <= (p.safetyStock||0));
       const pending = wos.filter(w => ['open','in_progress'].includes(w.status));
@@ -32,6 +38,28 @@ const Dashboard = {
       }
 
       el.innerHTML = `
+        <!-- Card Visibility Controls -->
+        <div style="padding:12px;background:var(--c-surface2);border-radius:8px;margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-size:.9rem;color:var(--c-text2);align-self:center">📌 顯示卡片:</span>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" ${cardVisibility.stats ? 'checked' : ''} onchange="Dashboard.toggleCard('stats', this.checked)">
+            <span style="font-size:.9rem">📊 統計</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" ${cardVisibility.charts ? 'checked' : ''} onchange="Dashboard.toggleCard('charts', this.checked)">
+            <span style="font-size:.9rem">📈 圖表</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" ${cardVisibility.alerts ? 'checked' : ''} onchange="Dashboard.toggleCard('alerts', this.checked)">
+            <span style="font-size:.9rem">⚠️ 警報</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" ${cardVisibility.warranty ? 'checked' : ''} onchange="Dashboard.toggleCard('warranty', this.checked)">
+            <span style="font-size:.9rem">📅 保固</span>
+          </label>
+        </div>
+        
+        ${cardVisibility.stats ? `
         <!-- Stats -->
         <div class="stats-grid">
           <div class="stat-card blue">
@@ -83,7 +111,9 @@ const Dashboard = {
             <div class="stat-icon cyan">📈</div>
           </div>
         </div>
+        ` : ''}
 
+        ${cardVisibility.charts ? `
         <!-- Charts -->
         <div class="charts-grid">
           <div class="chart-card">
@@ -99,7 +129,9 @@ const Dashboard = {
             <canvas id="chart-asset-status" height="220"></canvas>
           </div>
         </div>
+        ` : ''}
 
+        ${cardVisibility.alerts ? `
         <!-- Alerts + Low Stock -->
         <div class="grid-2">
           <div class="card">
@@ -148,6 +180,7 @@ const Dashboard = {
               }).join('')}
           </div>
         </div>
+        ` : ''}
       `;
 
       // Draw charts
@@ -158,5 +191,14 @@ const Dashboard = {
       console.error(e);
       el.innerHTML = `<div class="alert-banner danger">儀表板載入失敗: ${e.message}</div>`;
     }
+  },
+
+  async toggleCard(cardType, visible) {
+    const current = await DB.getSetting('dashboardCards') || {
+      stats: true, charts: true, alerts: true, warranty: true
+    };
+    current[cardType] = visible;
+    await DB.setSetting('dashboardCards', current);
+    this.render();
   }
 };

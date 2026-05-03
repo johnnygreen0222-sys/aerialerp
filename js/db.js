@@ -2,12 +2,12 @@
    db.js — IndexedDB Data Layer for AerialERP
 ═══════════════════════════════════════════ */
 const DB = (() => {
-  const NAME = 'AerialERP', VER = 2;
+  const NAME = 'AerialERP', VER = 4;
   let _db = null;
 
   const open = () => new Promise((res, rej) => {
     if (_db) return res(_db);
-    const req = indexedDB.open(NAME, 2); // bump version for new stores
+    const req = indexedDB.open(NAME, 4); // bump version for new stores
     req.onupgradeneeded = e => {
       const db = e.target.result;
       const stores = {
@@ -22,6 +22,7 @@ const DB = (() => {
         users:            { key: 'id', auto: true },
         service_requests: { key: 'id', auto: true },
         customers:        { key: 'id', auto: true },
+        audit_logs:       { key: 'id', auto: true },
       };
       Object.entries(stores).forEach(([name, cfg]) => {
         if (!db.objectStoreNames.contains(name)) {
@@ -123,10 +124,27 @@ const DB = (() => {
     }),
   };
 
+  const AuditLogs = {
+    all:          ()       => getAll('audit_logs'),
+    byEntity:     (type, id) => getAll('audit_logs', log => log.entityType===type && log.entityId===id),
+    log:          async (type, entityId, action, oldData, newData, userId) => {
+      return add('audit_logs', {
+        entityType: type,
+        entityId: entityId,
+        action: action,
+        oldData: oldData,
+        newData: newData,
+        userId: userId || (await getSetting('currentUserId')) || 'unknown',
+        timestamp: new Date().toISOString()
+      });
+    },
+    clear:        () => clear('audit_logs'),
+  };
+
   return {
     open, getAll, getOne, add, put, remove, clear, count,
     getSetting, setSetting, isSeeded, markSeeded,
     Brands, Models, Assets, Parts, WorkOrders, Transactions, InventoryCounts,
-    ServiceRequests, Customers
+    ServiceRequests, Customers, AuditLogs
   };
 })();

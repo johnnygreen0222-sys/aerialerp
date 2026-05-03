@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣高空 — Email 驗證</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="../js/db.js"></script>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <style>
+    body { background: var(--c-bg); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .verify-wrap { max-width: 480px; width: 100%; text-align: center; }
+    .card { padding: 40px 20px; }
+    .verify-icon { font-size: 4rem; margin-bottom: 16px; }
+    .loader { border: 4px solid var(--c-border); border-top-color: var(--c-blue); border-radius: 50%; width: 48px; height: 48px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="verify-wrap">
+  <div class="card" id="verify-card">
+    <div id="loading-state">
+      <div class="loader"></div>
+      <h2 style="color:var(--c-text1)">驗證中...</h2>
+      <p style="color:var(--c-text3);margin-top:8px">請稍候，我們正在確認您的申請資料。</p>
+    </div>
+    
+    <div id="success-state" class="hidden">
+      <div class="verify-icon">✅</div>
+      <h2 style="color:var(--c-emerald)">驗證成功！</h2>
+      <p style="color:var(--c-text2);margin-top:8px">您的申請（案號：<span id="case-no" style="font-weight:600"></span>）已正式成立並進入處理排程。</p>
+      <div style="margin-top: 24px;">
+        <button class="btn btn-primary" onclick="window.location.href='../index.html'">回首頁</button>
+      </div>
+    </div>
+    
+    <div id="error-state" class="hidden">
+      <div class="verify-icon">❌</div>
+      <h2 style="color:var(--c-red)">驗證失敗</h2>
+      <p style="color:var(--c-text2);margin-top:8px" id="error-msg">無效的驗證連結，或該申請已驗證過。</p>
+      <div style="margin-top: 24px; font-size: 0.85rem; color: var(--c-text3); text-align: left; background: var(--c-surface2); padding: 12px; border-radius: var(--r-md);">
+        <strong>💡 溫馨提醒（Demo 限制說明）：</strong><br>
+        由於本系統目前為純前端本地資料庫（IndexedDB）展示版，<br>
+        您的申請資料僅儲存在<strong>您當前提交申請的瀏覽器中</strong>。<br>
+        如果您在電腦上送出申請，但用手機打開此連結，系統將無法找到該筆資料。請使用原本填寫表單的裝置與瀏覽器開啟此連結。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await DB.open();
+    
+    // 取得 URL 上的 token
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    
+    if (!token) {
+      throw new Error('缺少驗證碼 (Token missing)');
+    }
+
+    // 尋找對應的申請案
+    const requests = await DB.ServiceRequests.all();
+    const request = requests.find(r => r.verifyToken === token);
+    
+    if (!request) {
+      throw new Error('找不到對應的申請紀錄，可能已驗證過，或是您正在使用不同的裝置開啟此連結。');
+    }
+    
+    if (request.status !== 'pending_verification') {
+      throw new Error('此申請已經驗證過，無需重複驗證。');
+    }
+    
+    // 更新狀態為待處理
+    request.status = 'pending';
+    // 為了安全，我們也可以清空 token 避免重複使用
+    request.verifyToken = null;
+    request.verifiedAt = new Date().toISOString();
+    
+    await DB.ServiceRequests.save(request);
+    
+    // 顯示成功
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('success-state').classList.remove('hidden');
+    document.getElementById('case-no').textContent = request.caseNo;
+    
+  } catch (err) {
+    console.error('Verification Error:', err);
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('error-state').classList.remove('hidden');
+    if (err.message) {
+      document.getElementById('error-msg').textContent = err.message;
+    }
+  }
+});
+</script>
+</body>
+</html>

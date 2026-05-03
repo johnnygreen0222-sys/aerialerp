@@ -8,7 +8,7 @@ const ServiceRequestsModule = {
     const ST  = { repair:'🔧 維修申請', warranty:'🛡 保固登錄', maintenance:'📅 定期保養' };
     const filtered = this._filter === 'all' ? all : all.filter(r => r.status === this._filter);
     filtered.sort((a,b) => (b.submittedAt||'').localeCompare(a.submittedAt||''));
-    const counts = { pending:0, processing:0, completed:0, cancelled:0 };
+    const counts = { pending_verification:0, pending:0, processing:0, completed:0, cancelled:0 };
     all.forEach(r => { if (counts[r.status]!==undefined) counts[r.status]++; });
 
     const el = document.getElementById('page-content');
@@ -21,7 +21,7 @@ const ServiceRequestsModule = {
       </div>
 
       <div class="wo-pipeline">
-        ${[['all','全部',all.length],['pending','待處理',counts.pending],['processing','處理中',counts.processing],['completed','已完成',counts.completed]].map(([s,l,c])=>`
+        ${[['all','全部',all.length],['pending_verification','待驗證',counts.pending_verification],['pending','待處理',counts.pending],['processing','處理中',counts.processing],['completed','已完成',counts.completed]].map(([s,l,c])=>`
           <div class="wo-status-step ${this._filter===s?'active':''}" onclick="ServiceRequestsModule._filter='${s}';ServiceRequestsModule.render()">
             ${l} <span class="count">${c}</span>
           </div>`).join('')}
@@ -37,9 +37,9 @@ const ServiceRequestsModule = {
               return `<tr>
                 <td class="mono text-sm"><strong>${r.caseNo||'—'}</strong></td>
                 <td>${ST[r.serviceType]||r.serviceType||'—'}</td>
-                <td>${r.name}</td>
-                <td class="mono text-sm">${r.phone}</td>
-                <td><div class="text-sm"><strong>${r.brand||''}</strong> ${r.model||''}</div><div class="text-xs text-muted mono">${r.serialNumber||''}</div></td>
+                <td>${fmt.escape(r.name)}</td>
+                <td class="mono text-sm">${fmt.escape(r.phone)}</td>
+                <td><div class="text-sm"><strong>${fmt.escape(r.brand||'')}</strong> ${fmt.escape(r.model||'')}</div><div class="text-xs text-muted mono">${fmt.escape(r.serialNumber||'')}</div></td>
                 <td><span class="badge ${s.badge}">${s.label}</span></td>
                 <td class="text-sm text-muted">${fmt.datetime(r.submittedAt)}</td>
                 <td><div class="action-row">
@@ -66,30 +66,30 @@ const ServiceRequestsModule = {
         <span class="chip">${ST[r.serviceType]||r.serviceType}</span>
       </div>
       <div class="info-grid" style="margin-bottom:16px">
-        <div class="info-row"><span class="label">案號</span><span class="value mono">${r.caseNo}</span></div>
+        <div class="info-row"><span class="label">案號</span><span class="value mono">${fmt.escape(r.caseNo)}</span></div>
         <div class="info-row"><span class="label">申請時間</span><span class="value">${fmt.datetime(r.submittedAt)}</span></div>
-        <div class="info-row"><span class="label">姓名</span><span class="value">${r.name}</span></div>
-        <div class="info-row"><span class="label">電話</span><span class="value mono">${r.phone}</span></div>
-        <div class="info-row"><span class="label">Email</span><span class="value">${r.email||'—'}</span></div>
-        <div class="info-row"><span class="label">品牌/型號</span><span class="value">${r.brand} ${r.model}</span></div>
-        <div class="info-row"><span class="label">產品序號</span><span class="value mono">${r.serialNumber}</span></div>
+        <div class="info-row"><span class="label">姓名</span><span class="value">${fmt.escape(r.name)}</span></div>
+        <div class="info-row"><span class="label">電話</span><span class="value mono">${fmt.escape(r.phone)}</span></div>
+        <div class="info-row"><span class="label">Email</span><span class="value">${fmt.escape(r.email||'—')}</span></div>
+        <div class="info-row"><span class="label">品牌/型號</span><span class="value">${fmt.escape(r.brand)} ${fmt.escape(r.model)}</span></div>
+        <div class="info-row"><span class="label">產品序號</span><span class="value mono">${fmt.escape(r.serialNumber)}</span></div>
         ${r.preferredDate ? `<div class="info-row"><span class="label">預約日期</span><span class="value">${fmt.date(r.preferredDate)}</span></div>` : ''}
       </div>
       <div class="form-group" style="margin-bottom:16px">
         <div class="form-label">申請說明</div>
-        <div style="background:var(--c-surface);padding:10px 12px;border-radius:var(--r-md);font-size:.88rem">${r.description||'—'}</div>
+        <div style="background:var(--c-surface);padding:10px 12px;border-radius:var(--r-md);font-size:.88rem;white-space:pre-wrap;">${fmt.escape(r.description||'—')}</div>
       </div>
       ${r.warrantyCard ? `<div class="form-group"><div class="form-label">保固卡</div><img src="${r.warrantyCard}" style="max-height:150px;border-radius:var(--r-md);object-fit:cover"></div>` : ''}
       ${r.invoice ? `<div class="form-group"><div class="form-label">發票</div><img src="${r.invoice}" style="max-height:150px;border-radius:var(--r-md);object-fit:cover"></div>` : ''}
       <div class="form-group">
         <label class="form-label">更新狀態</label>
         <select class="form-control" id="sr-status-sel">
-          ${['pending','processing','completed','cancelled'].map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${SR[s]?.label||s}</option>`).join('')}
+          ${['pending_verification','pending','processing','completed','cancelled'].map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${SR[s]?.label||s}</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
         <label class="form-label">處理備註</label>
-        <textarea class="form-control" id="sr-notes" rows="2">${r.notes||''}</textarea>
+        <textarea class="form-control" id="sr-notes" rows="2">${fmt.escape(r.notes||'')}</textarea>
       </div>
       <div class="form-actions">
         <button class="btn btn-secondary" onclick="App.closeModal()">關閉</button>

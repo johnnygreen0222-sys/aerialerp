@@ -1,9 +1,10 @@
 /* inventory.js — Parts Inventory Module */
 const InventoryModule = {
-  _parts:[], _brands:[], _filter:{ brand:'', category:'', q:'' },
+  _parts:[], _brands:[], _filter:{ brand:'', category:'', q:'' }, _selected:new Set(),
 
   async render() {
     [this._parts, this._brands] = await Promise.all([DB.Parts.all(), DB.Brands.all()]);
+    this._selected.clear();
     this.renderView();
   },
 
@@ -35,7 +36,8 @@ const InventoryModule = {
           <p>多狀態庫存管理 · 安全庫存預警 · 即時成本換算</p>
         </div>
         <div class="page-header-right">
-          ${App.can('inventory') ? `<button class="btn btn-secondary" onclick="InventoryModule.showReceiveForm()">📥 採購入庫</button>` : ''}
+          ${App.can('inventory') ? `<button class="btn btn-secondary" onclick="InventoryModule.showReceiveForm()" style="margin-right:8px">📥 採購入庫</button>` : ''}
+          ${App.can('inventory') ? `<button class="btn btn-secondary" onclick="BulkImport.showImportForm('parts')" style="margin-right:8px">📥 批量導入</button>` : ''}
           ${App.can('inventory') ? `<button class="btn btn-primary" onclick="InventoryModule.showPartForm()">＋ 新增零件</button>` : ''}
         </div>
       </div>
@@ -64,19 +66,32 @@ const InventoryModule = {
 
       <div class="table-toolbar">
         <div class="table-toolbar-left">
-          <div class="search-box">
-            <span>🔍</span>
-            <input type="text" placeholder="搜尋零件名稱 / 料號…" value="${this._filter.q}"
-              oninput="InventoryModule._filter.q=this.value; InventoryModule.renderView()">
-          </div>
-          <select class="filter-select" onchange="InventoryModule._filter.brand=this.value; InventoryModule.renderView()">
-            <option value="">所有品牌</option>
-            ${this._brands.map(b=>`<option value="${b.id}" ${this._filter.brand==b.id?'selected':''}>${b.name}</option>`).join('')}
-          </select>
-          <select class="filter-select" onchange="InventoryModule._filter.category=this.value; InventoryModule.renderView()">
-            <option value="">所有類別</option>
-            ${cats.map(c=>`<option value="${c}" ${this._filter.category===c?'selected':''}>${c}</option>`).join('')}
-          </select>
+          ${this._selected.size > 0 ? `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--c-surface2);border-radius:6px">
+              <span style="color:var(--c-text2);font-size:0.9rem">已選擇 ${this._selected.size} 項</span>
+              <button class="btn btn-sm btn-secondary" onclick="InventoryModule.batchUpdateCategory()">🏷 分類</button>
+              <button class="btn btn-sm btn-danger" onclick="InventoryModule.batchDelete()">🗑 刪除</button>
+              <button class="btn btn-sm btn-secondary" onclick="InventoryModule._selected.clear(); InventoryModule.renderView()">✕ 取消</button>
+            </div>
+          ` : `
+            <div style="flex:1">
+              ${FilterPresets.renderPresetButtons('inventory')}
+              <div class="search-box">
+                <span>🔍</span>
+                <input type="text" placeholder="搜尋零件名稱 / 料號…" value="${this._filter.q}"
+                  oninput="InventoryModule._filter.q=this.value; InventoryModule.renderView()">
+              </div>
+              <select class="filter-select" onchange="InventoryModule._filter.brand=this.value; InventoryModule.renderView()">
+                <option value="">所有品牌</option>
+                ${this._brands.map(b=>`<option value="${b.id}" ${this._filter.brand==b.id?'selected':''}>${b.name}</option>`).join('')}
+              </select>
+              <select class="filter-select" onchange="InventoryModule._filter.category=this.value; InventoryModule.renderView()">
+                <option value="">所有類別</option>
+                ${cats.map(c=>`<option value="${c}" ${this._filter.category===c?'selected':''}>${c}</option>`).join('')}
+              </select>
+              <button class="btn btn-sm btn-secondary" onclick="FilterPresets.showSavePresetDialog('inventory', InventoryModule._filter, ['q', 'brand', 'category'])" title="保存當前篩選為預設" style="margin-left:8px">💾 保存篩選</button>
+            </div>
+          `}
         </div>
         <span class="text-muted text-sm">${filtered.length} / ${this._parts.length} 項</span>
       </div>
@@ -84,6 +99,7 @@ const InventoryModule = {
       <div class="table-wrap table-responsive">
         <table class="data-table">
           <thead><tr>
+            <th style="width:40px"><input type="checkbox" onchange="InventoryModule.selectAll(this.checked)" title="全選"></th>
             <th>料號 Part No.</th><th>名稱 Name</th><th>品牌</th><th>類別</th>
             <th>在庫</th><th>在途</th><th>已訂</th><th>安全庫存</th>
             <th>單價 USD</th><th>TWD成本</th><th>操作</th>
@@ -96,7 +112,9 @@ const InventoryModule = {
               const isOut = (p.onHand||0) === 0;
               const pct   = Math.min(100, p.safetyStock ? Math.round((p.onHand||0)/p.safetyStock*100) : 100);
               const rowCls = isOut ? 'part-row-critical' : isLow ? 'part-row-alert' : '';
-              return `<tr class="${rowCls}">
+              const isChecked = InventoryModule._selected.has(p.id);
+              return `<tr class="${rowCls}" style="background:${isChecked?'var(--c-surface2)':''}">
+                <td style="text-align:center"><input type="checkbox" ${isChecked?'checked':''} onchange="InventoryModule.toggleSelect(${p.id}, this.checked)"></td>
                 <td><span class="mono text-sm">${p.partNumber}</span></td>
                 <td><strong>${p.name}</strong></td>
                 <td>${brand.logo||''} ${brand.name||'—'}</td>
@@ -117,6 +135,7 @@ const InventoryModule = {
                     ${App.can('inventory') ? `<button class="btn btn-sm btn-success" onclick="InventoryModule.adjustStock(${p.id},1,'onHand')" title="入庫">＋</button>` : ''}
                     ${App.can('inventory') ? `<button class="btn btn-sm btn-amber" onclick="InventoryModule.adjustStock(${p.id},-1,'onHand')" title="出庫">－</button>` : ''}
                     ${App.can('inventory') ? `<button class="btn btn-sm btn-secondary" onclick="InventoryModule.showPartForm(${p.id})">✏</button>` : ''}
+                    ${App.can('inventory') ? `<button class="btn btn-sm btn-info" onclick="InventoryModule.copyPart(${p.id})" title="複製">📋</button>` : ''}
                     ${App.can('inventory') ? `<button class="btn btn-sm btn-danger" onclick="InventoryModule.remove(${p.id})">🗑</button>` : ''}
                   </div>
                 </td>
@@ -288,7 +307,7 @@ const InventoryModule = {
     const obj = {
       brandId:    parseInt(document.getElementById('pf-brand').value),
       category:   document.getElementById('pf-cat').value,
-      partNumber: document.getElementById('pf-pn').value.trim(),
+      partNumber: document.getElementById('pf-pn').value.trim().toUpperCase(),
       name:       document.getElementById('pf-name').value.trim(),
       unit:       document.getElementById('pf-unit').value.trim()||'個',
       unitCostUSD:parseFloat(document.getElementById('pf-cost').value)||0,
@@ -298,8 +317,24 @@ const InventoryModule = {
       reserved:   parseInt(document.getElementById('pf-reserved').value)||0,
       lastUpdated:new Date().toISOString()
     };
-    if (id) obj.id = parseInt(id);
-    await DB.Parts.save(obj);
+
+    if (!id) {
+      const existing = this._parts.find(p => p.partNumber === obj.partNumber);
+      if (existing) {
+        App.toast(`⚠️ 料號「${obj.partNumber}」已存在！\n名稱: ${existing.name}`, 'warning');
+        return;
+      }
+    }
+
+    if (id) {
+      obj.id = parseInt(id);
+      const oldData = await DB.Parts.get(obj.id);
+      await DB.AuditLogs.log('Part', obj.id, 'UPDATE', oldData, obj, App.state.user?.id);
+      await DB.Parts.save(obj);
+    } else {
+      const result = await DB.Parts.save(obj);
+      await DB.AuditLogs.log('Part', result.id, 'CREATE', null, result, App.state.user?.id);
+    }
     App.closeModal();
     App.toast(id?'零件已更新 ✓':'零件已新增 ✓','success');
     await this.render();
@@ -308,8 +343,92 @@ const InventoryModule = {
 
   async remove(id) {
     if (!confirm('確定刪除此零件主檔？')) return;
+    const oldData = await DB.Parts.get(id);
+    await DB.AuditLogs.log('Part', id, 'DELETE', oldData, null, App.state.user?.id);
     await DB.Parts.remove(id);
     App.toast('零件已刪除','warning');
+    await this.render();
+  },
+
+  async copyPart(id) {
+    const part = this._parts.find(p=>p.id===id);
+    if (!part) return;
+    const newPart = {...part};
+    delete newPart.id;
+    newPart.partNumber = `${part.partNumber}-COPY`;
+    newPart.onHand = 0;
+    newPart.inTransit = 0;
+    newPart.reserved = 0;
+    await DB.Parts.save(newPart);
+    App.toast(`已複製零件「${part.name}」✓`, 'success');
+    await this.render();
+  },
+
+  toggleSelect(id, checked) {
+    if (checked) this._selected.add(id);
+    else this._selected.delete(id);
+    this.renderView();
+  },
+
+  selectAll(checked) {
+    if (checked) {
+      this._parts.forEach(p => this._selected.add(p.id));
+    } else {
+      this._selected.clear();
+    }
+    this.renderView();
+  },
+
+  batchDelete() {
+    if (!confirm(`確定要刪除所選的 ${this._selected.size} 項零件嗎？`)) return;
+    App.openModal('確認刪除', `
+      <div style="margin-bottom:16px" class="alert-banner danger">
+        ⚠️ 此操作無法恢復，將刪除 ${this._selected.size} 項零件主檔
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal()">取消</button>
+        <button type="button" class="btn btn-danger" onclick="InventoryModule.confirmBatchDelete()">確認刪除</button>
+      </div>`, 'modal-sm');
+  },
+
+  async confirmBatchDelete() {
+    App.closeModal();
+    for (const id of this._selected) {
+      await DB.Parts.remove(id);
+    }
+    App.toast(`✅ 已刪除 ${this._selected.size} 項零件`, 'success');
+    await this.render();
+  },
+
+  batchUpdateCategory() {
+    const cats = ['Filter','Tire','Battery','Electrical','Structural','Hydraulic','Safety','Mechanical','Other'];
+    App.openModal('批量更新分類', `
+      <form onsubmit="InventoryModule.confirmBatchUpdateCategory(event)">
+        <div class="form-group">
+          <label class="form-label">新分類</label>
+          <select class="form-control" id="batch-cat" required>
+            <option value="">選擇分類…</option>
+            ${cats.map(c=>`<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="App.closeModal()">取消</button>
+          <button type="submit" class="btn btn-primary">確認更新</button>
+        </div>
+      </form>`, 'modal-sm');
+  },
+
+  async confirmBatchUpdateCategory(e) {
+    e.preventDefault();
+    const newCat = document.getElementById('batch-cat').value;
+    App.closeModal();
+
+    for (const id of this._selected) {
+      const part = await DB.Parts.get(id);
+      part.category = newCat;
+      await DB.Parts.save(part);
+    }
+    App.toast(`✅ 已更新 ${this._selected.size} 項零件的分類`, 'success');
     await this.render();
   }
 };

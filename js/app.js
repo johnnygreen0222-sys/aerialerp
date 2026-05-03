@@ -36,6 +36,7 @@ const App = (() => {
       users:            { view:1, create:1, edit:1, delete:1 },
       backup:           { view:1 },
       calendar:         { view:1, create:1 },
+      audit:            { view:1 },
     },
     sales: {
       dashboard:        { view:1 },
@@ -50,6 +51,7 @@ const App = (() => {
       users:            { view:0, create:0, edit:0, delete:0 },
       backup:           { view:0 },
       calendar:         { view:1, create:0 },
+      audit:            { view:0 },
     },
     technician: {
       dashboard:        { view:1 },
@@ -64,6 +66,7 @@ const App = (() => {
       users:            { view:0, create:0, edit:0, delete:0 },
       backup:           { view:0 },
       calendar:         { view:1, create:0 },
+      audit:            { view:0 },
     },
   };
 
@@ -99,6 +102,12 @@ const App = (() => {
     usdToTWD: usd => {
       if (!state.exchangeRates.USD || !usd) return '—';
       return fmt.twd(Math.round(usd * state.exchangeRates.USD));
+    },
+    escape: str => {
+      if (str == null) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[m]);
     }
   };
 
@@ -118,7 +127,7 @@ const App = (() => {
     factory_return: { label:'送回原廠處理',   icon:'🏭' },
   };
   const WO_PRIORITY = { high:{label:'緊急',badge:'badge-red'}, medium:{label:'一般',badge:'badge-amber'}, low:{label:'低',badge:'badge-gray'} };
-  const SR_STATUS   = { pending:{label:'待處理',badge:'badge-amber'}, processing:{label:'處理中',badge:'badge-blue'}, completed:{label:'已完成',badge:'badge-emerald'}, cancelled:{label:'已取消',badge:'badge-gray'} };
+  const SR_STATUS   = { pending_verification:{label:'待驗證',badge:'badge-gray'}, pending:{label:'待處理',badge:'badge-amber'}, processing:{label:'處理中',badge:'badge-blue'}, completed:{label:'已完成',badge:'badge-emerald'}, cancelled:{label:'已取消',badge:'badge-gray'} };
 
   // ── Toast ────────────────────────────────
   const toast = (msg, type='info') => {
@@ -156,6 +165,7 @@ const App = (() => {
     users:            { title:'使用者管理 Users',         module:()=>UsersModule.render() },
     backup:           { title:'資料備份 Backup',          module:()=>BackupModule.render() },
     calendar:         { title:'保養行事曆 Calendar',      module:()=>CalendarModule.render() },
+    audit:            { title:'修改追蹤 Audit Log',       module:()=>AuditModule.render() },
   };
 
   const navigate = hash => {
@@ -211,6 +221,7 @@ const App = (() => {
   };
 
   const logout = () => {
+    if (GoogleAuth) GoogleAuth.logout();
     state.user = null;
     document.getElementById('app-shell').classList.add('hidden');
     document.getElementById('login-screen').style.display = '';
@@ -307,9 +318,19 @@ const App = (() => {
   const init = async () => {
     await DB.open();
     await DataSeed.run();
+    await FilterPresets.init();
+    await DragSort.init();
+    await AutoBackup.init();
+    await SearchHistory.init();
+    BatchEdit.init();
+    await APIInterface.init();
+    await GoogleAuth.init();
     window.addEventListener('hashchange', () => { if (state.user) navigate(location.hash); });
     document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target===document.getElementById('modal-overlay')) closeModal(); });
-    document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+    document.addEventListener('keydown', e => {
+      if (e.key==='Escape') closeModal();
+      if ((e.ctrlKey || e.metaKey) && e.key==='k') { e.preventDefault(); SearchHub.open(); }
+    });
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   };
 

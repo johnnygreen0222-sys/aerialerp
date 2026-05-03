@@ -17,8 +17,8 @@ const BrandsModule = {
         </div>
         <div class="page-header-right">
           ${this._tab==='brands'
-            ? (App.can('brands') ? `<button class="btn btn-primary" onclick="BrandsModule.showBrandForm()">＋ 新增品牌</button>` : '')
-            : (App.can('brands') ? `<button class="btn btn-primary" onclick="BrandsModule.showModelForm()">＋ 新增型號</button>` : '')}
+            ? (App.can('brands') ? `<button class="btn btn-secondary" onclick="BulkImport.showImportForm('brands')" style="margin-right:8px">📥 批量導入</button><button class="btn btn-primary" onclick="BrandsModule.showBrandForm()">＋ 新增品牌</button>` : '')
+            : (App.can('brands') ? `<button class="btn btn-secondary" onclick="BulkImport.showImportForm('models')" style="margin-right:8px">📥 批量導入</button><button class="btn btn-primary" onclick="BrandsModule.showModelForm()">＋ 新增型號</button>` : '')}
         </div>
       </div>
 
@@ -28,15 +28,29 @@ const BrandsModule = {
       </div>
 
       ${this._tab==='brands' ? this.renderBrands() : this.renderModels()}`;
+    
+    // Enable drag-sort for brands
+    if (this._tab === 'brands') {
+      setTimeout(() => {
+        const grid = document.getElementById('brands-grid');
+        if (grid) DragSort.enable(grid, 'brands', () => this.render());
+      }, 0);
+    }
   },
 
   renderBrands() {
     const modelCount = id => this._models.filter(m=>m.brandId===id).length;
-    return this._brands.length === 0
-      ? `<div class="empty-state"><div class="empty-icon">🏷</div><p>尚無品牌資料</p></div>`
-      : `<div class="grid-auto">
-          ${this._brands.map(b => `
-            <div class="card" style="cursor:default">
+    if (this._brands.length === 0) return `<div class="empty-state"><div class="empty-icon">🏷</div><p>尚無品牌資料</p></div>`;
+    
+    const allIds = this._brands.map(b => b.id);
+    const sorted = DragSort.getSortedIds('brands', allIds);
+    const brandMap = Object.fromEntries(this._brands.map(b => [b.id, b]));
+    
+    return `<div class="grid-auto" id="brands-grid" style="position:relative">
+          ${sorted.map(id => {
+            const b = brandMap[id];
+            return `
+            <div class="card" data-id="${b.id}" style="cursor:grab;transition:all 0.2s ease">
               <div class="card-header">
                 <div style="display:flex;align-items:center;gap:10px">
                   <span style="font-size:2rem">${b.logo||'🏷'}</span>
@@ -47,6 +61,7 @@ const BrandsModule = {
                 </div>
                 <div class="action-row">
                   ${App.can('brands') ? `<button class="btn btn-sm btn-secondary" onclick="BrandsModule.showBrandForm(${b.id})">✏</button>` : ''}
+                  ${App.can('brands') ? `<button class="btn btn-sm btn-info" onclick="BrandsModule.copyBrand(${b.id})" title="複製">📋</button>` : ''}
                   ${App.can('brands') ? `<button class="btn btn-sm btn-danger" onclick="BrandsModule.removeBrand(${b.id})">🗑</button>` : ''}
                 </div>
               </div>
@@ -55,7 +70,7 @@ const BrandsModule = {
                 <span class="chip">🏗 ${modelCount(b.id)} 型號</span>
                 <button class="btn btn-sm btn-secondary" onclick="BrandsModule._tab='models'; BrandsModule.renderView()">查看型號</button>
               </div>
-            </div>`).join('')}
+            </div>`}).join('')}
         </div>`;
   },
 
@@ -84,6 +99,7 @@ const BrandsModule = {
                   <td>
                     <div class="action-row">
                       ${App.can('brands') ? `<button class="btn btn-sm btn-secondary" onclick="BrandsModule.showModelForm(${m.id})">✏</button>` : ''}
+                      ${App.can('brands') ? `<button class="btn btn-sm btn-info" onclick="BrandsModule.copyModel(${m.id})" title="複製">📋</button>` : ''}
                       ${App.can('brands') ? `<button class="btn btn-sm btn-danger" onclick="BrandsModule.removeModel(${m.id})">🗑</button>` : ''}
                     </div>
                   </td>
@@ -133,14 +149,33 @@ const BrandsModule = {
       country: document.getElementById('bf-country').value.trim(),
       description: document.getElementById('bf-desc').value.trim()
     };
-    if (id) obj.id = parseInt(id);
-    await DB.Brands.save(obj);
+
+    if (!id) {
+      const existing = this._brands.find(b => b.name.toLowerCase() === obj.name.toLowerCase());
+      if (existing) {
+        App.toast(`⚠️ 品牌「${obj.name}」已存在，請檢查是否重複`, 'warning');
+        return;
+      }
+    }
+
+    if (id) {
+      obj.id = parseInt(id);
+      const oldData = await DB.Brands.get(obj.id);
+      await DB.AuditLogs.log('Brand', obj.id, 'UPDATE', oldData, obj, App.state.user?.id);
+    } else {
+      const result = await DB.Brands.save(obj);
+      await DB.AuditLogs.log('Brand', result.id, 'CREATE', null, result, App.state.user?.id);
+    }
+    if (!id) await DB.Brands.save(obj);
+    else await DB.Brands.save(obj);
     App.closeModal(); App.toast('品牌已儲存 ✓','success');
     await this.render();
   },
 
   async removeBrand(id) {
     if (!confirm('確定刪除此品牌？相關型號將失去品牌關聯。')) return;
+    const oldData = await DB.Brands.get(id);
+    await DB.AuditLogs.log('Brand', id, 'DELETE', oldData, null, App.state.user?.id);
     await DB.Brands.remove(id); App.toast('品牌已刪除','warning');
     await this.render();
   },
@@ -212,15 +247,57 @@ const BrandsModule = {
       maxCapacity: parseFloat(document.getElementById('mf-cap').value)||null,
       weight:      parseFloat(document.getElementById('mf-weight').value)||null,
     };
-    if (id) obj.id = parseInt(id);
-    await DB.Models.save(obj);
+
+    if (!id) {
+      const existing = this._models.find(m => 
+        m.modelName.toLowerCase() === obj.modelName.toLowerCase() && m.brandId === obj.brandId
+      );
+      if (existing) {
+        App.toast(`⚠️ 型號「${obj.modelName}」在此品牌中已存在`, 'warning');
+        return;
+      }
+    }
+
+    if (id) {
+      obj.id = parseInt(id);
+      const oldData = await DB.Models.get(obj.id);
+      await DB.AuditLogs.log('Model', obj.id, 'UPDATE', oldData, obj, App.state.user?.id);
+      await DB.Models.save(obj);
+    } else {
+      const result = await DB.Models.save(obj);
+      await DB.AuditLogs.log('Model', result.id, 'CREATE', null, result, App.state.user?.id);
+    }
     App.closeModal(); App.toast('型號已儲存 ✓','success');
     await this.render();
   },
 
   async removeModel(id) {
     if (!confirm('確定刪除此型號？')) return;
+    const oldData = await DB.Models.get(id);
+    await DB.AuditLogs.log('Model', id, 'DELETE', oldData, null, App.state.user?.id);
     await DB.Models.remove(id); App.toast('型號已刪除','warning');
+    await this.render();
+  },
+
+  async copyBrand(id) {
+    const brand = this._brands.find(b=>b.id===id);
+    if (!brand) return;
+    const newBrand = {...brand};
+    delete newBrand.id;
+    newBrand.name = `${brand.name} (複本)`;
+    await DB.Brands.save(newBrand);
+    App.toast(`已複製品牌「${brand.name}」✓`, 'success');
+    await this.render();
+  },
+
+  async copyModel(id) {
+    const model = this._models.find(m=>m.id===id);
+    if (!model) return;
+    const newModel = {...model};
+    delete newModel.id;
+    newModel.modelName = `${model.modelName} (複本)`;
+    await DB.Models.save(newModel);
+    App.toast(`已複製型號「${model.modelName}」✓`, 'success');
     await this.render();
   }
 };

@@ -35,17 +35,16 @@
     </div>
     <div class="login-card">
       <h2 class="login-card-title">系統登入</h2>
-      <p class="login-hint">請輸入帳號與密碼 / Enter credentials</p>
 
       <form id="login-form" onsubmit="App.login(event)" autocomplete="off">
         <div class="form-group" style="margin-bottom:14px">
           <label class="form-label">帳號 Username</label>
-          <input class="form-control" id="login-username" placeholder="請輸入帳號" autocomplete="username" required>
+          <input class="form-control" id="login-username" placeholder="username" autocomplete="username" required>
         </div>
         <div class="form-group" style="margin-bottom:14px">
           <label class="form-label">密碼 Password</label>
           <div style="position:relative">
-            <input class="form-control" id="login-password" type="password" placeholder="請輸入密碼" autocomplete="current-password" required style="padding-right:44px">
+            <input class="form-control" id="login-password" type="password" placeholder="password" autocomplete="current-password" required style="padding-right:44px">
             <button type="button" onclick="App.togglePwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--c-text3);cursor:pointer;font-size:1rem">👁</button>
           </div>
         </div>
@@ -53,9 +52,25 @@
         <button type="submit" class="btn btn-primary w-full" style="padding:11px;font-size:.95rem;justify-content:center">🔐 登入 Login</button>
       </form>
 
+      <div style="margin-top:16px;position:relative">
+        <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--c-border)"></div>
+        <div style="position:relative;text-align:center;background:var(--c-surface);padding:0 8px;width:fit-content;margin:0 auto;color:var(--c-text3);font-size:0.85rem">或</div>
+      </div>
+
+      <button type="button" id="google-login-btn" onclick="GoogleAuth.login()" 
+        style="width:100%;padding:11px;margin-top:16px;background:white;color:#333;border:1px solid #e0e0e0;border-radius:6px;font-size:.95rem;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s" 
+        onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='white'">
+        <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        使用 Google 登入
+      </button>
+
       <div class="login-footer" style="margin-top:20px">
         <span class="version-badge">v1.1.0</span>
-        <span class="login-footer-note" style="font-size:.68rem;color:var(--c-text3)">預設帳號 admin / admin1234</span>
       </div>
     </div>
   </div>
@@ -113,6 +128,12 @@
         <a class="nav-item" data-page="reports" href="#/reports">
           <span class="nav-icon">📈</span><span class="nav-text">報表 Reports</span>
         </a>
+        <a class="nav-item" onclick="AdvancedReports.showReportsHub()" style="cursor:pointer">
+          <span class="nav-icon">📊</span><span class="nav-text">進階報表 Analytics</span>
+        </a>
+        <a class="nav-item" onclick="LegacyImport.showImportWizard()" style="cursor:pointer">
+          <span class="nav-icon">📥</span><span class="nav-text">資料匯入 Import</span>
+        </a>
       </div>
       <div class="nav-section">
         <span class="nav-label">客戶服務</span>
@@ -129,8 +150,14 @@
         <a class="nav-item admin-only" data-page="users" href="#/users">
           <span class="nav-icon">🔐</span><span class="nav-text">使用者管理 Users</span>
         </a>
-        <a class="nav-item admin-only" data-page="backup" href="#/backup">
-          <span class="nav-icon">💾</span><span class="nav-text">資料備份 Backup</span>
+        <a class="nav-item admin-only" data-page="audit" href="#/audit">
+          <span class="nav-icon">📋</span><span class="nav-text">修改追蹤 Audit</span>
+        </a>
+        <a class="nav-item admin-only" onclick="AutoBackup.showBackupDialog()" style="cursor:pointer">
+          <span class="nav-icon">💾</span><span class="nav-text">備份管理 Backup</span>
+        </a>
+        <a class="nav-item admin-only" onclick="APIInterface.showAPIDocumentation()" style="cursor:pointer">
+          <span class="nav-icon">🔌</span><span class="nav-text">API 文檔 API Docs</span>
         </a>
       </div>
     </nav>
@@ -195,7 +222,7 @@
 <script src="js/config.js"></script>
 <script src="js/data-seed.js"></script>
 <script src="js/app.js"></script>
-<script src="js/charts.js"></script>
+<script src="js/modules/google-auth.js"></script><script src="js/charts.js"></script>
 <script src="js/scanner.js"></script>
 <script src="js/modules/dashboard.js"></script>
 <script src="js/modules/assets.js"></script>
@@ -203,7 +230,17 @@
 <script src="js/modules/workorders.js"></script>
 <script src="js/modules/scanner-hub.js"></script>
 <script src="js/modules/brands.js"></script>
-<script src="js/modules/reports.js"></script>
+<script src="js/modules/search-hub.js"></script>
+<script src="js/modules/bulk-import.js"></script>
+<script src="js/modules/filter-presets.js"></script>
+<script src="js/modules/audit.js"></script>
+<script src="js/modules/drag-sort.js"></script>
+<script src="js/modules/auto-backup.js"></script>
+<script src="js/modules/legacy-import.js"></script>
+<script src="js/modules/advanced-reports.js"></script>
+<script src="js/modules/search-history.js"></script>
+<script src="js/modules/batch-edit.js"></script>
+<script src="js/modules/api-interface.js"></script><script src="js/modules/reports.js"></script>
 <script src="js/modules/service-requests.js"></script>
 <script src="js/modules/crm.js"></script>
 <script src="js/modules/backup.js"></script>
